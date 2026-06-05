@@ -1,4 +1,4 @@
-// AG Model Switcher v5.2.0 — SLOTS + PICKER ORDER (SEPARATED)
+// AG Model Switcher v6.0.0 — INSTANT CYCLE (NO POPUP)
 //
 // ┌──────────────────────────────────────────────────────────────────┐
 // │ ARCHITECTURE (from reverse-engineering Antigravity IDE source):  │
@@ -9,16 +9,18 @@
 // │ • UP/DOWN navigates between items                                │
 // │ • ENTER/click selects the focused item                           │
 // │                                                                  │
-// │ STRATEGY v5.2: SEPARATE picker order from slot assignment        │
-// │   • modelOrder = full picker layout (must match IDE UI)          │
-// │   • slots = user's favorite models (any order, any subset)       │
-// │   • Ctrl+Shift+N → find model from slots[N-1]                   │
-// │     → look up its position in modelOrder (picker order)          │
-// │     → navigate to that position via UP overshoot + DOWN          │
+// │ STRATEGY v6.0: INSTANT CYCLE + OPTIMIZED SPEED                   │
+// │   • Ctrl+Shift+. → cycle NEXT model automatically               │
+// │   • Ctrl+Shift+, → cycle PREVIOUS model                         │
+// │   • Ctrl+Shift+N → direct slot selection                         │
+// │   • NO QuickPick popup — all cycles go through AppleScript       │
+// │   • Reduced delays: 500ms → 200ms for picker render              │
+// │   • Reduced overshoot: 20 → 12 UPs                              │
+// │   • In-memory tracking of current model for cycling              │
 // │                                                                  │
 // │ NAVIGATION:                                                      │
-// │   1. Open picker                                                 │
-// │   2. Press UP many times → focus goes to header (top)            │
+// │   1. Open picker (toggleModelSelector)                           │
+// │   2. Press UP 12 times → focus goes to header (top)              │
 // │   3. Press DOWN (pickerPosition + 1) times → target item         │
 // │      (+1 because first DOWN goes from header to item 0)          │
 // │   4. Press ENTER                                                 │
@@ -30,6 +32,11 @@ const os = require('os');
 
 let statusBarItem;
 let outputChannel;
+
+// ─── Current model tracking ──────────────────────────────────────
+// Tracks which model was last selected via this extension.
+// Used by cycleNext/cyclePrev to determine the next/previous model.
+let currentModelIndex = -1; // -1 = unknown (first use)
 
 // ─── Default picker order (MUST match native picker display order) ──
 // CONFIRMED by user testing (2026-06-05):
@@ -61,7 +68,7 @@ const DEFAULT_MODEL_ORDER = [
 
 function activate(context) {
     outputChannel = vscode.window.createOutputChannel('AG Model Switcher');
-    log('v5.2.0 SLOTS+PICKER activating...');
+    log('v6.0.0 INSTANT CYCLE activating...');
 
     // ─── Status Bar ─────────────────────────────────────────
     statusBarItem = vscode.window.createStatusBarItem(
@@ -70,11 +77,12 @@ function activate(context) {
     statusBarItem.name = 'AG Model Switcher';
     statusBarItem.text = '$(sparkle) Model';
     statusBarItem.tooltip = [
-        '⌨️ AG Model Switcher v5.2 (Slots + Picker)',
+        '⌨️ AG Model Switcher v6.0 (Instant Cycle)',
         '───────────────────────────────',
         'Ctrl+Shift+M   → Open Model Picker',
+        'Ctrl+Shift+.   → Cycle Next Model ⚡',
+        'Ctrl+Shift+,   → Cycle Previous Model ⚡',
         'Ctrl+Shift+1~8 → Select model from slots',
-        'Ctrl+Shift+.   → Choose from QuickPick',
     ].join('\n');
     statusBarItem.command = 'agModelSwitcher.openPicker';
     statusBarItem.show();
@@ -85,8 +93,11 @@ function activate(context) {
     // Ctrl+Shift+M → open native picker (no auto-select)
     reg(context, 'agModelSwitcher.openPicker', cmdOpenPicker);
 
-    // Ctrl+Shift+. → show QuickPick then auto-select
-    reg(context, 'agModelSwitcher.cycleNext', cmdQuickPickAndSelect);
+    // Ctrl+Shift+. → cycle NEXT model (NO POPUP — instant)
+    reg(context, 'agModelSwitcher.cycleNext', () => cmdCycle('next'));
+
+    // Ctrl+Shift+, → cycle PREVIOUS model (NO POPUP — instant)
+    reg(context, 'agModelSwitcher.cyclePrev', () => cmdCycle('prev'));
 
     // Ctrl+Shift+1~8 → auto-select by slot
     for (let i = 1; i <= 8; i++) {
@@ -131,13 +142,15 @@ async function cmdOpenPicker() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CMD: QuickPick → Auto-Select (Ctrl+Shift+.)
+// CMD: Cycle Next/Previous (Ctrl+Shift+. / Ctrl+Shift+,)
+//
+// ⚡ NO POPUP — directly auto-selects the next/previous model
+// in the slots list via AppleScript keyboard navigation.
 // ═══════════════════════════════════════════════════════════════
 
-async function cmdQuickPickAndSelect() {
-    log('CMD: quickPickAndSelect');
-    const pickerOrder = getModelOrder();
+async function cmdCycle(direction) {
     const slots = getSlots();
+    const pickerOrder = getModelOrder();
 
     if (slots.length === 0) {
         vscode.window.showWarningMessage(
@@ -149,39 +162,45 @@ async function cmdQuickPickAndSelect() {
         return;
     }
 
-    const items = slots.map((name, i) => {
-        const pickerPos = pickerOrder.indexOf(name);
-        return {
-            label: `$(sparkle) ${name}`,
-            description: `Ctrl+Shift+${i + 1}${pickerPos === -1 ? '  ⚠️ not in picker' : ''}`,
-            pickerPosition: pickerPos,
-            modelName: name,
-        };
-    });
-
-    const picked = await vscode.window.showQuickPick(items, {
-        placeHolder: '🔍 Choose a model to auto-select...',
-        matchOnDescription: true,
-    });
-
-    if (picked) {
-        if (picked.pickerPosition === -1) {
-            vscode.window.showErrorMessage(
-                `Model "${picked.modelName}" not found in modelOrder (picker order). Please check the name.`
-            );
-            return;
-        }
-        await autoSelectByPosition(picked.pickerPosition, picked.modelName);
+    // Calculate next/previous index
+    let targetIndex;
+    if (currentModelIndex === -1) {
+        // First use — start from beginning (next) or end (prev)
+        targetIndex = direction === 'next' ? 0 : slots.length - 1;
+    } else if (direction === 'next') {
+        targetIndex = (currentModelIndex + 1) % slots.length;
+    } else {
+        targetIndex = (currentModelIndex - 1 + slots.length) % slots.length;
     }
+
+    const modelName = slots[targetIndex];
+    const pickerPosition = pickerOrder.indexOf(modelName);
+
+    if (pickerPosition === -1) {
+        log(`CMD: cycle ${direction} → "${modelName}" NOT FOUND in pickerOrder!`);
+        vscode.window.showErrorMessage(
+            `Model "${modelName}" not found in modelOrder. Check the name.`,
+            'Open Settings'
+        ).then(a => {
+            if (a) vscode.commands.executeCommand('workbench.action.openSettings', 'agModelSwitcher.modelOrder');
+        });
+        return;
+    }
+
+    log(`CMD: cycle ${direction} → slot[${targetIndex}] → "${modelName}" → picker pos ${pickerPosition}`);
+
+    // Update tracking BEFORE auto-select so even if it fails, we cycle correctly next time
+    currentModelIndex = targetIndex;
+
+    await autoSelectByPosition(pickerPosition, modelName);
 }
 
 // ═══════════════════════════════════════════════════════════════
 // CMD: Slot Auto-Select (Ctrl+Shift+1~8)
 //
-// NEW in v5.2: slots[] is separate from modelOrder[]
-//   - slots[slotIndex] gives the MODEL NAME
-//   - modelOrder.indexOf(modelName) gives the PICKER POSITION
-//   - navigate to picker position
+// slots[slotIndex] gives the MODEL NAME
+// modelOrder.indexOf(modelName) gives the PICKER POSITION
+// navigate to picker position
 // ═══════════════════════════════════════════════════════════════
 
 async function cmdSlotAutoSelect(slot) {
@@ -216,6 +235,10 @@ async function cmdSlotAutoSelect(slot) {
     }
 
     log(`CMD: slot${slot} → "${modelName}" → picker position ${pickerPosition}`);
+
+    // Update current model tracking
+    currentModelIndex = slotIndex;
+
     await autoSelectByPosition(pickerPosition, modelName);
 }
 
@@ -231,8 +254,8 @@ async function cmdSlotAutoSelect(slot) {
 //
 // Algorithm:
 //   1. Open picker (toggleModelSelector)
-//   2. Wait for render
-//   3. Press UP 20 times → overshoot to header (safe ceiling)
+//   2. Wait for render (200ms — optimized from 500ms)
+//   3. Press UP 12 times → overshoot to header (safe ceiling)
 //   4. Press DOWN (pickerPosition + 1) times → navigate to target
 //      +1 because first DOWN goes from header → item 0
 //   5. Press ENTER → select
@@ -245,7 +268,7 @@ async function autoSelectByPosition(position, modelName) {
     if (!autoSelect || os.platform() !== 'darwin') {
         log('  ℹ️ Auto-select disabled or not macOS → fallback');
         await cmdOpenPicker();
-        vscode.window.showInformationMessage(`Chọn "${modelName}" trong danh sách`);
+        vscode.window.showInformationMessage(`Select "${modelName}" from the list`);
         return;
     }
 
@@ -262,8 +285,8 @@ async function autoSelectByPosition(position, modelName) {
         await vscode.commands.executeCommand('antigravity.toggleModelSelector');
         log('  ✅ Picker opened');
 
-        // Step 2: Wait for picker UI to render
-        await delay(500);
+        // Step 2: Wait for picker UI to render (optimized: 200ms instead of 500ms)
+        await delay(200);
 
         // Step 3: Build & execute AppleScript
         const script = buildNavigationAppleScript(position);
@@ -274,10 +297,10 @@ async function autoSelectByPosition(position, modelName) {
         if (statusBarItem) {
             statusBarItem.text = `$(check) ${modelName}`;
             setTimeout(() => {
-                if (statusBarItem) statusBarItem.text = '$(sparkle) Model';
-            }, 3000);
+                if (statusBarItem) statusBarItem.text = `$(sparkle) ${modelName}`;
+            }, 2000);
         }
-        vscode.window.setStatusBarMessage(`✅ Selected: ${modelName}`, 3000);
+        vscode.window.setStatusBarMessage(`✅ ${modelName}`, 2000);
 
     } catch (err) {
         log(`  ❌ AppleScript failed: ${err.message}`);
@@ -297,12 +320,12 @@ async function autoSelectByPosition(position, modelName) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// APPLESCRIPT BUILDER (Keyboard Navigation)
+// APPLESCRIPT BUILDER (Keyboard Navigation — Optimized)
 // ═══════════════════════════════════════════════════════════════
 
 function buildNavigationAppleScript(position) {
     // Key codes: UP=126, DOWN=125, ENTER=36
-    const OVERSHOOT = 20; // Press UP this many times to guarantee reaching header
+    const OVERSHOOT = 12; // Reduced from 20 — 12 is enough for 8 models + header
     const downsNeeded = position + 1; // +1 because first DOWN goes header→item0
 
     const lines = [
@@ -318,7 +341,7 @@ function buildNavigationAppleScript(position) {
     }
 
     lines.push('');
-    lines.push('    delay 0.1');
+    lines.push('    delay 0.05'); // Reduced from 0.1
     lines.push('');
     lines.push(`    -- Step 2: Navigate DOWN ${downsNeeded} times (header → item ${position})`);
 
@@ -326,12 +349,12 @@ function buildNavigationAppleScript(position) {
     for (let i = 0; i < downsNeeded; i++) {
         lines.push('    key code 125'); // DOWN
         if (i < downsNeeded - 1) {
-            lines.push('    delay 0.03'); // Tiny delay between DOWNs for reliability
+            lines.push('    delay 0.02'); // Reduced from 0.03
         }
     }
 
     lines.push('');
-    lines.push('    delay 0.05');
+    lines.push('    delay 0.03'); // Reduced from 0.05
     lines.push('');
     lines.push('    -- Step 3: Select');
     lines.push('    key code 36'); // ENTER
@@ -371,7 +394,7 @@ async function cmdDiagnose() {
 
     outputChannel.clear();
     outputChannel.appendLine('╔═══════════════════════════════════════════╗');
-    outputChannel.appendLine('║   AG Model Switcher v5.2 — DIAGNOSTIC     ║');
+    outputChannel.appendLine('║   AG Model Switcher v6.0 — DIAGNOSTIC     ║');
     outputChannel.appendLine('╚═══════════════════════════════════════════╝');
     outputChannel.appendLine('');
 
@@ -387,6 +410,16 @@ async function cmdDiagnose() {
     outputChannel.appendLine(`  ${has('antigravity.toggleModelSelector')} antigravity.toggleModelSelector`);
     outputChannel.appendLine('');
 
+    // Current model tracking
+    outputChannel.appendLine('─── Current Model Tracking ───');
+    const slots = getSlots();
+    if (currentModelIndex >= 0 && currentModelIndex < slots.length) {
+        outputChannel.appendLine(`  Current: slot[${currentModelIndex}] → "${slots[currentModelIndex]}"`);
+    } else {
+        outputChannel.appendLine(`  Current: (unknown — no model selected via extension yet)`);
+    }
+    outputChannel.appendLine('');
+
     // Picker Order (modelOrder)
     const pickerOrder = getModelOrder();
     const rawModelOrder = cfg.get('modelOrder', []);
@@ -400,7 +433,6 @@ async function cmdDiagnose() {
     outputChannel.appendLine('');
 
     // Slots
-    const slots = getSlots();
     const rawSlots = cfg.get('slots', []);
     const usingSlots = rawSlots.length > 0;
     outputChannel.appendLine('─── Slots (favorites) ───');
@@ -427,14 +459,20 @@ async function cmdDiagnose() {
     }
     outputChannel.appendLine('');
 
-    // Navigation Method
-    outputChannel.appendLine('─── Navigation Method ───');
-    outputChannel.appendLine('  1. Open picker (toggleModelSelector)');
-    outputChannel.appendLine('  2. UP x20 → overshoot to header "Model"');
-    outputChannel.appendLine('  3. DOWN x(pickerPosition+1) → navigate to target item');
-    outputChannel.appendLine('  4. ENTER → select');
+    // Cycle Info
+    outputChannel.appendLine('─── Cycle Commands ───');
+    outputChannel.appendLine('  Ctrl+Shift+. → Cycle Next (no popup!)');
+    outputChannel.appendLine('  Ctrl+Shift+, → Cycle Previous (no popup!)');
+    outputChannel.appendLine(`  Cycle order: ${slots.map((n, i) => `[${i}]${n}`).join(' → ')}`);
     outputChannel.appendLine('');
-    outputChannel.appendLine('  Note: slots[] maps favorite names → pickerOrder[] finds position');
+
+    // Navigation Method
+    outputChannel.appendLine('─── Navigation Method (Optimized v6.0) ───');
+    outputChannel.appendLine('  1. Open picker (toggleModelSelector)');
+    outputChannel.appendLine('  2. Wait 200ms (reduced from 500ms)');
+    outputChannel.appendLine('  3. UP x12 → overshoot to header "Model" (reduced from 20)');
+    outputChannel.appendLine('  4. DOWN x(pickerPosition+1) → navigate to target item');
+    outputChannel.appendLine('  5. ENTER → select');
     outputChannel.appendLine('');
 
     // AppleScript test

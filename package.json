@@ -2,7 +2,7 @@
   "name": "ag-model-switcher",
   "displayName": "AG Model Switcher",
   "description": "Auto-select AI model in Antigravity IDE via shortcuts — supports favorite slots (AppleScript, macOS)",
-  "version": "4.3.0",
+  "version": "6.0.0",
   "publisher": "pipyl",
   "license": "MIT",
   "repository": {
@@ -35,9 +35,15 @@
       },
       {
         "command": "agModelSwitcher.cycleNext",
-        "title": "Pick Model and Auto-Select",
+        "title": "Cycle Next Model (Instant)",
         "category": "AG Model Switcher",
         "icon": "$(arrow-right)"
+      },
+      {
+        "command": "agModelSwitcher.cyclePrev",
+        "title": "Cycle Previous Model (Instant)",
+        "category": "AG Model Switcher",
+        "icon": "$(arrow-left)"
       },
       {
         "command": "agModelSwitcher.slot1",
@@ -96,6 +102,11 @@
         "command": "agModelSwitcher.cycleNext",
         "key": "ctrl+shift+.",
         "mac": "ctrl+shift+."
+      },
+      {
+        "command": "agModelSwitcher.cyclePrev",
+        "key": "ctrl+shift+,",
+        "mac": "ctrl+shift+,"
       },
       {
         "command": "agModelSwitcher.slot1",
