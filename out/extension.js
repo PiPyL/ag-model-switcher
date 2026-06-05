@@ -72,9 +72,9 @@ function activate(context) {
     statusBarItem.tooltip = [
         '⌨️ AG Model Switcher v5.2 (Slots + Picker)',
         '───────────────────────────────',
-        'Ctrl+Shift+M   → Mở Model Picker',
-        'Ctrl+Shift+1~8 → Chọn model từ slots',
-        'Ctrl+Shift+.   → Chọn từ QuickPick',
+        'Ctrl+Shift+M   → Open Model Picker',
+        'Ctrl+Shift+1~8 → Select model from slots',
+        'Ctrl+Shift+.   → Choose from QuickPick',
     ].join('\n');
     statusBarItem.command = 'agModelSwitcher.openPicker';
     statusBarItem.show();
@@ -126,7 +126,7 @@ async function cmdOpenPicker() {
         log('  ✅ Picker opened');
     } catch (err) {
         log(`  ❌ Error: ${err.message}`);
-        vscode.window.showErrorMessage('Không thể mở Model Picker. Thử Cmd+/');
+        vscode.window.showErrorMessage('Cannot open Model Picker. Try Cmd+/');
     }
 }
 
@@ -141,8 +141,8 @@ async function cmdQuickPickAndSelect() {
 
     if (slots.length === 0) {
         vscode.window.showWarningMessage(
-            'Chưa cấu hình slots hoặc modelOrder. Mở Settings?',
-            'Mở Settings'
+            'No slots or modelOrder configured. Open Settings?',
+            'Open Settings'
         ).then(a => {
             if (a) vscode.commands.executeCommand('workbench.action.openSettings', 'agModelSwitcher');
         });
@@ -160,14 +160,14 @@ async function cmdQuickPickAndSelect() {
     });
 
     const picked = await vscode.window.showQuickPick(items, {
-        placeHolder: '🔍 Chọn model để auto-select...',
+        placeHolder: '🔍 Choose a model to auto-select...',
         matchOnDescription: true,
     });
 
     if (picked) {
         if (picked.pickerPosition === -1) {
             vscode.window.showErrorMessage(
-                `Model "${picked.modelName}" không tìm thấy trong modelOrder (picker order). Kiểm tra tên chính xác.`
+                `Model "${picked.modelName}" not found in modelOrder (picker order). Please check the name.`
             );
             return;
         }
@@ -192,8 +192,8 @@ async function cmdSlotAutoSelect(slot) {
     if (slotIndex >= slots.length) {
         log(`CMD: slot${slot} → exceeds slot list (only ${slots.length} slots)`);
         vscode.window.showWarningMessage(
-            `Chỉ có ${slots.length} models trong slots. Phím ${slot} không có model.`,
-            'Mở Picker'
+            `Only ${slots.length} models configured in slots. Key ${slot} has no model.`,
+            'Open Picker'
         ).then(a => {
             if (a) cmdOpenPicker();
         });
@@ -206,9 +206,9 @@ async function cmdSlotAutoSelect(slot) {
     if (pickerPosition === -1) {
         log(`CMD: slot${slot} → "${modelName}" NOT FOUND in pickerOrder!`);
         vscode.window.showErrorMessage(
-            `Model "${modelName}" không tìm thấy trong modelOrder.\n` +
-            `Kiểm tra tên phải khớp chính xác (phân biệt hoa thường) với native picker.`,
-            'Mở Settings'
+            `Model "${modelName}" not found in modelOrder.\n` +
+            `Check that the name matches exactly (case-sensitive) with the native picker.`,
+            'Open Settings'
         ).then(a => {
             if (a) vscode.commands.executeCommand('workbench.action.openSettings', 'agModelSwitcher.modelOrder');
         });
@@ -255,7 +255,7 @@ async function autoSelectByPosition(position, modelName) {
     if (statusBarItem) {
         statusBarItem.text = `$(sync~spin) ${modelName}`;
     }
-    vscode.window.setStatusBarMessage(`$(sync~spin) Đang chuyển: ${modelName}...`, 3000);
+    vscode.window.setStatusBarMessage(`$(sync~spin) Switching to: ${modelName}...`, 3000);
 
     try {
         // Step 1: Open the model picker
@@ -277,7 +277,7 @@ async function autoSelectByPosition(position, modelName) {
                 if (statusBarItem) statusBarItem.text = '$(sparkle) Model';
             }, 3000);
         }
-        vscode.window.setStatusBarMessage(`✅ Đã chọn: ${modelName}`, 3000);
+        vscode.window.setStatusBarMessage(`✅ Selected: ${modelName}`, 3000);
 
     } catch (err) {
         log(`  ❌ AppleScript failed: ${err.message}`);
@@ -286,8 +286,8 @@ async function autoSelectByPosition(position, modelName) {
         if (statusBarItem) statusBarItem.text = '$(sparkle) Model';
 
         vscode.window.showWarningMessage(
-            `Auto-select thất bại. Chọn "${modelName}" thủ công.`,
-            'Bật Accessibility'
+            `Auto-select failed. Please select "${modelName}" manually.`,
+            'Enable Accessibility'
         ).then(a => {
             if (a) {
                 exec('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"');
@@ -448,14 +448,14 @@ async function cmdDiagnose() {
             outputChannel.appendLine('  ✅ AppleScript OK!');
         } catch (err) {
             outputChannel.appendLine(`  ❌ Error: ${err.message}`);
-            outputChannel.appendLine('  ⚠️ Cần bật Accessibility permissions!');
+            outputChannel.appendLine('  ⚠️ Accessibility permissions required!');
         }
     } else {
         outputChannel.appendLine('  ⚠️ Not macOS');
     }
 
     outputChannel.show();
-    vscode.window.showInformationMessage('Diagnostic complete. Xem Output → "AG Model Switcher".');
+    vscode.window.showInformationMessage('Diagnostic complete. Check Output → "AG Model Switcher".');
 }
 
 // ═══════════════════════════════════════════════════════════════

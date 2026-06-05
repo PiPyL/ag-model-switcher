@@ -1,7 +1,7 @@
 {
   "name": "ag-model-switcher",
   "displayName": "AG Model Switcher",
-  "description": "Auto-select AI model trong Antigravity IDE bằng phím tắt — hỗ trợ slot favorites (AppleScript, macOS)",
+  "description": "Auto-select AI model in Antigravity IDE via shortcuts — supports favorite slots (AppleScript, macOS)",
   "version": "4.3.0",
   "publisher": "pipyl",
   "license": "MIT",
@@ -159,23 +159,23 @@
             "Gemini 3.1 Pro (Low)",
             "Gemini 3.1 Pro (High)"
           ],
-          "markdownDescription": "Thứ tự model trong **native picker** (UI gốc). **PHẢI khớp chính xác** thứ tự hiển thị từ trên xuống. Extension dùng vị trí này để điều hướng bàn phím."
+          "markdownDescription": "The order of models in the **native picker** (original UI). **MUST match exactly** the order displayed from top to bottom. The extension uses this order for keyboard navigation."
         },
         "agModelSwitcher.slots": {
           "type": "array",
           "items": { "type": "string" },
           "default": [],
-          "markdownDescription": "Danh sách model yêu thích gán cho `Ctrl+Shift+1~8`. Tên model phải có trong `modelOrder`. Nếu để trống → dùng `modelOrder` trực tiếp.\n\nVí dụ: chỉ giữ 3 model hay dùng:\n```json\n[\"Gemini 3.5 Flash (High)\", \"Claude Sonnet 4.6 (Thinking)\", \"Gemini 3.1 Pro (High)\"]\n```"
+          "markdownDescription": "Favorite models assigned to `Ctrl+Shift+1~8`. Model names must exist in `modelOrder`. If left empty, `modelOrder` will be used directly.\n\nExample: keep only 3 frequently used models:\n```json\n[\"Gemini 3.5 Flash (High)\", \"Claude Sonnet 4.6 (Thinking)\", \"Gemini 3.1 Pro (High)\"]\n```"
         },
         "agModelSwitcher.autoSelect": {
           "type": "boolean",
           "default": true,
-          "description": "Tự động chọn model bằng keyboard simulation (macOS, cần Accessibility permissions)"
+          "description": "Automatically select model using keyboard simulation (macOS, requires Accessibility permissions)"
         },
         "agModelSwitcher.showStatusBar": {
           "type": "boolean",
           "default": true,
-          "description": "Hiển thị nút Model Switcher trên status bar"
+          "description": "Show the Model Switcher button on the status bar"
         }
       }
     }
