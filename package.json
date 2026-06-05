@@ -4,10 +4,25 @@
   "description": "Auto-select AI model trong Antigravity IDE bằng phím tắt (position-based, AppleScript)",
   "version": "4.2.0",
   "publisher": "pipyl",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PiPyL/ag-model-switcher"
+  },
+  "bugs": {
+    "url": "https://github.com/PiPyL/ag-model-switcher/issues"
+  },
+  "homepage": "https://github.com/PiPyL/ag-model-switcher#readme",
+  "icon": "logo.png",
+  "keywords": ["ai", "model", "switcher", "antigravity", "hotkey"],
+  "galleryBanner": {
+    "color": "#1e1e2e",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": ["Other"],
+  "categories": ["Other", "Keymaps"],
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "contributes": {
