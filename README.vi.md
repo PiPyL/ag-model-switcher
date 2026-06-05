@@ -2,7 +2,7 @@
 
 > ⚡ Chuyển đổi AI model trong **Antigravity IDE** tức thì bằng phím tắt — không cần chuột.
 
-![Phiên bản](https://img.shields.io/badge/version-4.2.0-blue)
+![Phiên bản](https://img.shields.io/badge/version-4.3.0-blue)
 ![Nền tảng](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Giấy phép](https://img.shields.io/badge/license-MIT-green)
 
@@ -10,30 +10,29 @@
 
 ## 🧠 Cách Hoạt Động
 
-Extension điều khiển **model picker gốc của Antigravity IDE** bằng cách điều hướng bàn phím tự động qua **AppleScript** (chỉ dành cho macOS).
+Extension điều khiển **model picker gốc của Antigravity IDE** bằng điều hướng bàn phím tự động qua **AppleScript** (chỉ macOS).
 
-**Thuật toán (v5.1 — Keyboard Navigation):**
+**Thuật toán (v5.2 — Slots + Picker Order):**
 
 ```
-1. Mở picker  →  gọi lệnh antigravity.toggleModelSelector
-2. Nhấn UP ×20  →  "overshoot" lên header "Model" (vị trí an toàn cố định)
-3. Nhấn DOWN ×(vị trí + 1)  →  điều hướng đến model cần chọn
-   (+1 vì DOWN đầu tiên đi: header → item 0)
-4. Nhấn ENTER  →  xác nhận chọn
+1. Người dùng nhấn Ctrl+Shift+N
+2. Tra tên model từ slots[N-1]
+3. Tìm vị trí của model đó trong modelOrder (thứ tự picker)
+4. Mở picker → UP ×20 (overshoot lên header) → DOWN ×(vị trí+1) → ENTER
 ```
 
-Phương pháp này đáng tin cậy vì luôn bắt đầu từ một vị trí xác định (header), bất kể model nào đang được chọn trước đó.
+Phương pháp này tin cậy vì luôn bắt đầu từ vị trí cố định (header), bất kể model nào đang được chọn.
 
 ---
 
 ## ✨ Tính Năng
 
-- **8 slot truy cập trực tiếp** — chuyển ngay đến bất kỳ model nào bằng `Ctrl+Shift+1` đến `Ctrl+Shift+8`
+- **8 slot truy cập trực tiếp** — chuyển model tức thì bằng `Ctrl+Shift+1` đến `Ctrl+Shift+8`
+- **Slot favorites** — chỉ gán những model hay dùng nhất vào phím tắt qua setting `slots`
 - **Mở Model Picker gốc** — bằng `Ctrl+Shift+M` (không auto-select)
 - **QuickPick nội bộ** — duyệt danh sách và auto-select bằng `Ctrl+Shift+.`
-- **Status bar** — hiển thị trạng thái chuyển model với animation feedback
-- **Công cụ Diagnostic** — kiểm tra cấu hình, quyền Accessibility, và mapping model
-- **Thứ tự model tùy chỉnh** — chỉnh `modelOrder` trong Settings để khớp với UI thực tế
+- **Status bar** — hiển thị trạng thái chuyển model với animation
+- **Công cụ Diagnostic** — kiểm tra cấu hình, quyền, và mapping model
 
 ---
 
@@ -43,21 +42,27 @@ Phương pháp này đáng tin cậy vì luôn bắt đầu từ một vị trí
 |----------|-----------|
 | `Ctrl+Shift+M` | Mở Model Picker gốc (chỉ mở, không tự chọn) |
 | `Ctrl+Shift+.` | Mở QuickPick → chọn model → tự động áp dụng |
-| `Ctrl+Shift+1` | Tự động chọn Model Slot #1 |
-| `Ctrl+Shift+2` | Tự động chọn Model Slot #2 |
-| `Ctrl+Shift+3` | Tự động chọn Model Slot #3 |
-| `Ctrl+Shift+4` | Tự động chọn Model Slot #4 |
-| `Ctrl+Shift+5` | Tự động chọn Model Slot #5 |
-| `Ctrl+Shift+6` | Tự động chọn Model Slot #6 |
-| `Ctrl+Shift+7` | Tự động chọn Model Slot #7 |
-| `Ctrl+Shift+8` | Tự động chọn Model Slot #8 |
+| `Ctrl+Shift+1` | Tự động chọn Slot #1 |
+| `Ctrl+Shift+2` | Tự động chọn Slot #2 |
+| `Ctrl+Shift+3` | Tự động chọn Slot #3 |
+| `Ctrl+Shift+4` | Tự động chọn Slot #4 |
+| `Ctrl+Shift+5` | Tự động chọn Slot #5 |
+| `Ctrl+Shift+6` | Tự động chọn Slot #6 |
+| `Ctrl+Shift+7` | Tự động chọn Slot #7 |
+| `Ctrl+Shift+8` | Tự động chọn Slot #8 |
 | `Ctrl+Shift+D`, `Ctrl+Shift+M` | Chạy Diagnostic |
 
 ---
 
 ## ⚙️ Cấu Hình
 
-Mở **Settings** (`Cmd+,`) và tìm `agModelSwitcher`:
+Mở **Settings** (`Cmd+,`) và tìm `agModelSwitcher`.
+
+Có **2 setting chính** phối hợp với nhau:
+
+### `modelOrder` — Thứ Tự Picker (sự thật về UI)
+
+Đây là **danh sách đầy đủ tất cả model**, theo **đúng thứ tự** hiển thị trong picker gốc của IDE (từ trên xuống). Extension dùng thứ tự này để biết *vị trí* của từng model.
 
 ```json
 {
@@ -70,34 +75,53 @@ Mở **Settings** (`Cmd+,`) và tìm `agModelSwitcher`:
     "Gemini 3.5 Flash (Low)",
     "Gemini 3.1 Pro (Low)",
     "Gemini 3.1 Pro (High)"
-  ],
-  "agModelSwitcher.autoSelect": true,
-  "agModelSwitcher.showStatusBar": true
+  ]
 }
 ```
 
-### Giải Thích Từng Setting
+> ⚠️ Phải khớp chính xác với picker gốc. Nếu IDE cập nhật danh sách model → cập nhật lại setting này.
+
+### `slots` — Model Yêu Thích (những gì bạn muốn dùng)
+
+Gán chỉ những model hay dùng nhất cho `Ctrl+Shift+1~8`. Bạn có thể dùng **bất kỳ subset nào** theo **bất kỳ thứ tự nào**. Nếu để trống → fallback về `modelOrder`.
+
+```json
+{
+  "agModelSwitcher.slots": [
+    "Gemini 3.5 Flash (High)",
+    "Gemini 3.1 Pro (High)",
+    "Claude Sonnet 4.6 (Thinking)",
+    "Claude Opus 4.6 (Thinking)"
+  ]
+}
+```
+
+Kết quả:
+- `Ctrl+Shift+1` → Gemini 3.5 Flash (High) *(vị trí picker 4)*
+- `Ctrl+Shift+2` → Gemini 3.1 Pro (High) *(vị trí picker 7)*
+- `Ctrl+Shift+3` → Claude Sonnet 4.6 (Thinking) *(vị trí picker 0)*
+- `Ctrl+Shift+4` → Claude Opus 4.6 (Thinking) *(vị trí picker 1)*
+- `Ctrl+Shift+5~8` → cảnh báo: *"Chỉ có 4 models trong slots"*
+
+### Cách 2 Setting Phối Hợp
+
+```
+slots["Gemini 3.5 Flash (High)"]
+  → modelOrder.indexOf("Gemini 3.5 Flash (High)") = 4
+  → điều hướng đến vị trí picker 4
+  → đúng model được chọn ✅
+```
+
+### Bảng Tham Chiếu Settings
 
 | Key | Kiểu | Mặc định | Mô tả |
 |-----|------|---------|-------|
-| `agModelSwitcher.modelOrder` | `string[]` | 8 model có sẵn | **Phải khớp chính xác** thứ tự hiển thị trong picker của Antigravity IDE. Slot 1 = vị trí 0, Slot 2 = vị trí 1, ... |
-| `agModelSwitcher.autoSelect` | `boolean` | `true` | Bật auto-select qua AppleScript. Yêu cầu macOS + quyền Accessibility. |
-| `agModelSwitcher.showStatusBar` | `boolean` | `true` | Hiển thị nút model trên thanh trạng thái. |
+| `modelOrder` | `string[]` | 8 model có sẵn | Thứ tự picker đầy đủ. **Phải khớp** UI gốc của IDE. |
+| `slots` | `string[]` | `[]` (trống) | Model yêu thích cho `Ctrl+Shift+1~8`. Tên phải có trong `modelOrder`. |
+| `autoSelect` | `boolean` | `true` | Bật auto-select qua AppleScript. Yêu cầu macOS + Accessibility. |
+| `showStatusBar` | `boolean` | `true` | Hiển thị nút model trên status bar. |
 
-### Thứ Tự Model Mặc Định (đã xác nhận 05/06/2026)
-
-| Slot | Phím tắt | Model |
-|------|----------|-------|
-| 1 | `Ctrl+Shift+1` | Claude Sonnet 4.6 (Thinking) |
-| 2 | `Ctrl+Shift+2` | Claude Opus 4.6 (Thinking) |
-| 3 | `Ctrl+Shift+3` | GPT-OSS 120B (Medium) |
-| 4 | `Ctrl+Shift+4` | Gemini 3.5 Flash (Medium) |
-| 5 | `Ctrl+Shift+5` | Gemini 3.5 Flash (High) |
-| 6 | `Ctrl+Shift+6` | Gemini 3.5 Flash (Low) |
-| 7 | `Ctrl+Shift+7` | Gemini 3.1 Pro (Low) |
-| 8 | `Ctrl+Shift+8` | Gemini 3.1 Pro (High) |
-
-> ⚠️ Nếu Antigravity IDE cập nhật danh sách model, bạn cần cập nhật `agModelSwitcher.modelOrder` để phản ánh thứ tự hiển thị mới.
+> **Lưu ý:** Tên model trong `slots` phải khớp **chính xác** (phân biệt hoa thường) với tên trong `modelOrder`. Nếu không tìm thấy → extension hiện lỗi thay vì chọn nhầm model.
 
 ---
 
@@ -108,8 +132,8 @@ Tìm trong **Command Palette** (`Cmd+Shift+P`):
 | Lệnh | Mô tả |
 |------|-------|
 | `AG Model Switcher: Open Model Picker` | Mở picker gốc (không auto-select) |
-| `AG Model Switcher: Pick Model and Auto-Select` | QuickPick nội bộ → tự động chọn |
-| `AG Model Switcher: Select Model #1` đến `#8` | Chọn thẳng theo số slot |
+| `AG Model Switcher: Pick Model and Auto-Select` | QuickPick → tự động chọn |
+| `AG Model Switcher: Select Model #1` đến `#8` | Chọn thẳng theo slot |
 | `AG Model Switcher: Diagnose - Test Auto-Select` | Báo cáo diagnostic đầy đủ |
 
 ---
@@ -127,22 +151,20 @@ Tìm trong **Command Palette** (`Cmd+Shift+P`):
 
 **System Settings → Privacy & Security → Accessibility → Bật "Antigravity IDE"**
 
-Hoặc extension sẽ tự động mở cửa sổ này khi auto-select thất bại.
-
-> ℹ️ Trên hệ điều hành không phải macOS, extension sẽ fallback về mở picker thủ công và hiển thị thông báo yêu cầu chọn tay.
+> ℹ️ Trên hệ điều hành không phải macOS → extension fallback về mở picker thủ công.
 
 ---
 
 ## 🩺 Công Cụ Diagnostic
 
-Chạy `Ctrl+Shift+D, Ctrl+Shift+M` hoặc lệnh Diagnose để xem:
+Chạy `Ctrl+Shift+D, Ctrl+Shift+M` để xem:
 
 - Thông tin OS và nền tảng
-- Trạng thái `autoSelect` (bật/tắt)
-- AppleScript có khả dụng không
-- Lệnh `antigravity.toggleModelSelector` có tồn tại không
-- Bảng mapping đầy đủ: phím tắt → vị trí → tên model
-- Test AppleScript trực tiếp (kiểm tra quyền Accessibility)
+- Trạng thái `autoSelect`
+- Picker order (từ `modelOrder`)
+- Slot assignments (từ `slots`)
+- Bảng mapping đầy đủ: **phím tắt → slot → tên model → vị trí picker → số DOWN**
+- Test AppleScript trực tiếp
 
 Kết quả hiển thị trong **Output panel → "AG Model Switcher"**.
 
@@ -150,28 +172,22 @@ Kết quả hiển thị trong **Output panel → "AG Model Switcher"**.
 
 ## 🐛 Xử Lý Sự Cố
 
-**Model không chuyển được?**
-1. Chạy lệnh **Diagnostic** để kiểm tra toàn bộ cấu hình.
-2. Đảm bảo đã cấp quyền **Accessibility** (System Settings → Privacy & Security → Accessibility).
-3. Kiểm tra `agModelSwitcher.modelOrder` phải khớp **chính xác** tên model hiển thị trong IDE (phân biệt hoa thường).
-
-**Lỗi AppleScript?**
-- Thử trong Terminal: `osascript -e 'tell application "System Events" to tell process "Electron" to get frontmost'`
-- Nếu lỗi → chưa cấp quyền Accessibility.
-
 **Chọn nhầm model?**
-- Mở picker thủ công (`Ctrl+Shift+M`) và đếm vị trí của từng model từ trên xuống (tính từ 0, sau header "Model").
-- Cập nhật `agModelSwitcher.modelOrder` cho đúng thứ tự.
+- `modelOrder` chưa khớp thứ tự thực trong picker. Mở picker bằng `Ctrl+Shift+M`, đếm vị trí từ trên xuống, cập nhật `modelOrder`.
 
-**Auto-select không hoạt động sau khi IDE cập nhật?**
-- Danh sách model hoặc cấu trúc picker có thể đã thay đổi.
-- Kiểm tra lại vị trí các model và cập nhật `modelOrder` trong Settings.
+**Lỗi "Model không tìm thấy trong modelOrder"?**
+- Tên model trong `slots` không khớp chính xác với tên trong `modelOrder`. Kiểm tra lỗi chính tả và phân biệt hoa thường.
+
+**Auto-select không hoạt động?**
+1. Chạy **Diagnostic** để kiểm tra.
+2. Đảm bảo đã cấp quyền **Accessibility**.
+3. Test trong Terminal: `osascript -e 'tell application "System Events" to tell process "Electron" to get frontmost'`
 
 ---
 
 ## 📝 Lịch Sử Phiên Bản
 
-Xem [CHANGELOG.md](CHANGELOG.md) để biết chi tiết từng phiên bản.
+Xem [CHANGELOG.md](CHANGELOG.md) để biết chi tiết.
 
 ---
 

@@ -1,4 +1,4 @@
-// AG Model Switcher v5.1.0 — KEYBOARD NAVIGATION (FIXED)
+// AG Model Switcher v5.2.0 — SLOTS + PICKER ORDER (SEPARATED)
 //
 // ┌──────────────────────────────────────────────────────────────────┐
 // │ ARCHITECTURE (from reverse-engineering Antigravity IDE source):  │
@@ -9,10 +9,17 @@
 // │ • UP/DOWN navigates between items                                │
 // │ • ENTER/click selects the focused item                           │
 // │                                                                  │
-// │ STRATEGY v5.1: OVERSHOOT to top → navigate DOWN to target        │
+// │ STRATEGY v5.2: SEPARATE picker order from slot assignment        │
+// │   • modelOrder = full picker layout (must match IDE UI)          │
+// │   • slots = user's favorite models (any order, any subset)       │
+// │   • Ctrl+Shift+N → find model from slots[N-1]                   │
+// │     → look up its position in modelOrder (picker order)          │
+// │     → navigate to that position via UP overshoot + DOWN          │
+// │                                                                  │
+// │ NAVIGATION:                                                      │
 // │   1. Open picker                                                 │
 // │   2. Press UP many times → focus goes to header (top)            │
-// │   3. Press DOWN (position + 1) times → lands on target item      │
+// │   3. Press DOWN (pickerPosition + 1) times → target item         │
 // │      (+1 because first DOWN goes from header to item 0)          │
 // │   4. Press ENTER                                                 │
 // └──────────────────────────────────────────────────────────────────┘
@@ -24,7 +31,7 @@ const os = require('os');
 let statusBarItem;
 let outputChannel;
 
-// ─── Default model order (MUST match picker display order exactly) ──
+// ─── Default picker order (MUST match native picker display order) ──
 // CONFIRMED by user testing (2026-06-05):
 //   Position 0: Claude Sonnet 4.6 (Thinking)
 //   Position 1: Claude Opus 4.6 (Thinking)
@@ -35,17 +42,17 @@ let outputChannel;
 //   Position 6: Gemini 3.1 Pro (Low)
 //   Position 7: Gemini 3.1 Pro (High)
 //
-// ⚠️  If models change, update this OR set agModelSwitcher.modelOrder
-//     in settings.json with the new order.
+// ⚠️  If models change in IDE, update agModelSwitcher.modelOrder
+//     in settings.json with the new picker order.
 const DEFAULT_MODEL_ORDER = [
-    'Claude Sonnet 4.6 (Thinking)',    // Ctrl+Shift+1
-    'Claude Opus 4.6 (Thinking)',      // Ctrl+Shift+2
-    'GPT-OSS 120B (Medium)',           // Ctrl+Shift+3
-    'Gemini 3.5 Flash (Medium)',       // Ctrl+Shift+4
-    'Gemini 3.5 Flash (High)',         // Ctrl+Shift+5
-    'Gemini 3.5 Flash (Low)',          // Ctrl+Shift+6
-    'Gemini 3.1 Pro (Low)',            // Ctrl+Shift+7
-    'Gemini 3.1 Pro (High)',           // Ctrl+Shift+8
+    'Claude Sonnet 4.6 (Thinking)',    // picker position 0
+    'Claude Opus 4.6 (Thinking)',      // picker position 1
+    'GPT-OSS 120B (Medium)',           // picker position 2
+    'Gemini 3.5 Flash (Medium)',       // picker position 3
+    'Gemini 3.5 Flash (High)',         // picker position 4
+    'Gemini 3.5 Flash (Low)',          // picker position 5
+    'Gemini 3.1 Pro (Low)',            // picker position 6
+    'Gemini 3.1 Pro (High)',           // picker position 7
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -54,7 +61,7 @@ const DEFAULT_MODEL_ORDER = [
 
 function activate(context) {
     outputChannel = vscode.window.createOutputChannel('AG Model Switcher');
-    log('v5.1.0 KEYBOARD-NAV activating...');
+    log('v5.2.0 SLOTS+PICKER activating...');
 
     // ─── Status Bar ─────────────────────────────────────────
     statusBarItem = vscode.window.createStatusBarItem(
@@ -63,10 +70,10 @@ function activate(context) {
     statusBarItem.name = 'AG Model Switcher';
     statusBarItem.text = '$(sparkle) Model';
     statusBarItem.tooltip = [
-        '⌨️ AG Model Switcher v5.1 (Keyboard Nav)',
+        '⌨️ AG Model Switcher v5.2 (Slots + Picker)',
         '───────────────────────────────',
         'Ctrl+Shift+M   → Mở Model Picker',
-        'Ctrl+Shift+1~8 → Chọn model theo vị trí',
+        'Ctrl+Shift+1~8 → Chọn model từ slots',
         'Ctrl+Shift+.   → Chọn từ QuickPick',
     ].join('\n');
     statusBarItem.command = 'agModelSwitcher.openPicker';
@@ -81,7 +88,7 @@ function activate(context) {
     // Ctrl+Shift+. → show QuickPick then auto-select
     reg(context, 'agModelSwitcher.cycleNext', cmdQuickPickAndSelect);
 
-    // Ctrl+Shift+1~8 → auto-select by position
+    // Ctrl+Shift+1~8 → auto-select by slot
     for (let i = 1; i <= 8; i++) {
         reg(context, `agModelSwitcher.slot${i}`, () => cmdSlotAutoSelect(i));
     }
@@ -89,10 +96,23 @@ function activate(context) {
     // Diagnose
     reg(context, 'agModelSwitcher.diagnose', cmdDiagnose);
 
-    log('✅ Activated. Model mapping:');
-    getModelOrder().forEach((name, i) => {
-        log(`  [Ctrl+Shift+${i + 1}] → pos ${i} → "${name}"`);
-    });
+    log('✅ Activated.');
+    const pickerOrder = getModelOrder();
+    const slots = getSlots();
+    const usingSlots = slots !== pickerOrder;
+
+    if (usingSlots) {
+        log('📌 Slots configured (favorites):');
+        slots.forEach((name, i) => {
+            const pos = pickerOrder.indexOf(name);
+            log(`  [Ctrl+Shift+${i + 1}] → "${name}" → picker pos ${pos >= 0 ? pos : '❌ NOT FOUND'}`);
+        });
+    } else {
+        log('📌 No slots configured, using modelOrder directly:');
+        pickerOrder.forEach((name, i) => {
+            log(`  [Ctrl+Shift+${i + 1}] → pos ${i} → "${name}"`);
+        });
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -116,24 +136,28 @@ async function cmdOpenPicker() {
 
 async function cmdQuickPickAndSelect() {
     log('CMD: quickPickAndSelect');
-    const modelOrder = getModelOrder();
+    const pickerOrder = getModelOrder();
+    const slots = getSlots();
 
-    if (modelOrder.length === 0) {
+    if (slots.length === 0) {
         vscode.window.showWarningMessage(
-            'Chưa cấu hình modelOrder. Mở Settings?',
+            'Chưa cấu hình slots hoặc modelOrder. Mở Settings?',
             'Mở Settings'
         ).then(a => {
-            if (a) vscode.commands.executeCommand('workbench.action.openSettings', 'agModelSwitcher.modelOrder');
+            if (a) vscode.commands.executeCommand('workbench.action.openSettings', 'agModelSwitcher');
         });
         return;
     }
 
-    const items = modelOrder.map((name, i) => ({
-        label: `$(sparkle) ${name}`,
-        description: `Ctrl+Shift+${i + 1}`,
-        modelIndex: i,
-        modelName: name,
-    }));
+    const items = slots.map((name, i) => {
+        const pickerPos = pickerOrder.indexOf(name);
+        return {
+            label: `$(sparkle) ${name}`,
+            description: `Ctrl+Shift+${i + 1}${pickerPos === -1 ? '  ⚠️ not in picker' : ''}`,
+            pickerPosition: pickerPos,
+            modelName: name,
+        };
+    });
 
     const picked = await vscode.window.showQuickPick(items, {
         placeHolder: '🔍 Chọn model để auto-select...',
@@ -141,22 +165,34 @@ async function cmdQuickPickAndSelect() {
     });
 
     if (picked) {
-        await autoSelectByPosition(picked.modelIndex, picked.modelName);
+        if (picked.pickerPosition === -1) {
+            vscode.window.showErrorMessage(
+                `Model "${picked.modelName}" không tìm thấy trong modelOrder (picker order). Kiểm tra tên chính xác.`
+            );
+            return;
+        }
+        await autoSelectByPosition(picked.pickerPosition, picked.modelName);
     }
 }
 
 // ═══════════════════════════════════════════════════════════════
 // CMD: Slot Auto-Select (Ctrl+Shift+1~8)
+//
+// NEW in v5.2: slots[] is separate from modelOrder[]
+//   - slots[slotIndex] gives the MODEL NAME
+//   - modelOrder.indexOf(modelName) gives the PICKER POSITION
+//   - navigate to picker position
 // ═══════════════════════════════════════════════════════════════
 
 async function cmdSlotAutoSelect(slot) {
-    const modelOrder = getModelOrder();
-    const position = slot - 1; // Slot 1 → position 0
+    const slots = getSlots();
+    const pickerOrder = getModelOrder();
+    const slotIndex = slot - 1; // Slot 1 → index 0
 
-    if (position >= modelOrder.length) {
-        log(`CMD: slot${slot} → vượt quá danh sách (chỉ có ${modelOrder.length} models)`);
+    if (slotIndex >= slots.length) {
+        log(`CMD: slot${slot} → exceeds slot list (only ${slots.length} slots)`);
         vscode.window.showWarningMessage(
-            `Chỉ có ${modelOrder.length} models. Phím ${slot} không có model.`,
+            `Chỉ có ${slots.length} models trong slots. Phím ${slot} không có model.`,
             'Mở Picker'
         ).then(a => {
             if (a) cmdOpenPicker();
@@ -164,10 +200,23 @@ async function cmdSlotAutoSelect(slot) {
         return;
     }
 
-    const modelName = modelOrder[position];
-    log(`CMD: slot${slot} → position ${position} → "${modelName}"`);
+    const modelName = slots[slotIndex];
+    const pickerPosition = pickerOrder.indexOf(modelName);
 
-    await autoSelectByPosition(position, modelName);
+    if (pickerPosition === -1) {
+        log(`CMD: slot${slot} → "${modelName}" NOT FOUND in pickerOrder!`);
+        vscode.window.showErrorMessage(
+            `Model "${modelName}" không tìm thấy trong modelOrder.\n` +
+            `Kiểm tra tên phải khớp chính xác (phân biệt hoa thường) với native picker.`,
+            'Mở Settings'
+        ).then(a => {
+            if (a) vscode.commands.executeCommand('workbench.action.openSettings', 'agModelSwitcher.modelOrder');
+        });
+        return;
+    }
+
+    log(`CMD: slot${slot} → "${modelName}" → picker position ${pickerPosition}`);
+    await autoSelectByPosition(pickerPosition, modelName);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -184,7 +233,7 @@ async function cmdSlotAutoSelect(slot) {
 //   1. Open picker (toggleModelSelector)
 //   2. Wait for render
 //   3. Press UP 20 times → overshoot to header (safe ceiling)
-//   4. Press DOWN (position + 1) times → navigate to target
+//   4. Press DOWN (pickerPosition + 1) times → navigate to target
 //      +1 because first DOWN goes from header → item 0
 //   5. Press ENTER → select
 // ═══════════════════════════════════════════════════════════════
@@ -200,7 +249,7 @@ async function autoSelectByPosition(position, modelName) {
         return;
     }
 
-    log(`  🎯 Auto-selecting position ${position}: "${modelName}"`);
+    log(`  🎯 Auto-selecting picker position ${position}: "${modelName}"`);
 
     // Show status bar feedback
     if (statusBarItem) {
@@ -219,7 +268,7 @@ async function autoSelectByPosition(position, modelName) {
         // Step 3: Build & execute AppleScript
         const script = buildNavigationAppleScript(position);
         await execAppleScript(script);
-        log(`  ✅ Selected position ${position}: "${modelName}"`);
+        log(`  ✅ Selected picker position ${position}: "${modelName}"`);
 
         // Step 4: Success feedback
         if (statusBarItem) {
@@ -322,7 +371,7 @@ async function cmdDiagnose() {
 
     outputChannel.clear();
     outputChannel.appendLine('╔═══════════════════════════════════════════╗');
-    outputChannel.appendLine('║   AG Model Switcher v5.1 — DIAGNOSTIC     ║');
+    outputChannel.appendLine('║   AG Model Switcher v5.2 — DIAGNOSTIC     ║');
     outputChannel.appendLine('╚═══════════════════════════════════════════╝');
     outputChannel.appendLine('');
 
@@ -338,20 +387,43 @@ async function cmdDiagnose() {
     outputChannel.appendLine(`  ${has('antigravity.toggleModelSelector')} antigravity.toggleModelSelector`);
     outputChannel.appendLine('');
 
-    // Model Order
-    const modelOrder = getModelOrder();
-    const rawFromConfig = cfg.get('modelOrder', []);
-    outputChannel.appendLine('─── Model Order ───');
-    outputChannel.appendLine(`  Source: ${rawFromConfig.length > 0 ? 'User Settings' : 'DEFAULT (built-in)'}`);
-    outputChannel.appendLine(`  Total: ${modelOrder.length} models`);
+    // Picker Order (modelOrder)
+    const pickerOrder = getModelOrder();
+    const rawModelOrder = cfg.get('modelOrder', []);
+    outputChannel.appendLine('─── Picker Order (modelOrder) ───');
+    outputChannel.appendLine(`  Source: ${rawModelOrder.length > 0 ? 'User Settings' : 'DEFAULT (built-in)'}`);
+    outputChannel.appendLine(`  Total: ${pickerOrder.length} models`);
+    outputChannel.appendLine('');
+    for (let i = 0; i < pickerOrder.length; i++) {
+        outputChannel.appendLine(`  [pos ${i}] "${pickerOrder[i]}"`);
+    }
+    outputChannel.appendLine('');
+
+    // Slots
+    const slots = getSlots();
+    const rawSlots = cfg.get('slots', []);
+    const usingSlots = rawSlots.length > 0;
+    outputChannel.appendLine('─── Slots (favorites) ───');
+    outputChannel.appendLine(`  Source: ${usingSlots ? 'User Settings (agModelSwitcher.slots)' : 'Fallback to modelOrder'}`);
+    outputChannel.appendLine(`  Total: ${slots.length} slots`);
     outputChannel.appendLine('');
 
     // Hotkey Mapping
-    outputChannel.appendLine('─── Hotkey → Position → Model ───');
-    for (let i = 0; i < Math.min(8, modelOrder.length); i++) {
-        const name = modelOrder[i];
-        const downsFromHeader = i + 1;
-        outputChannel.appendLine(`  Ctrl+Shift+${i + 1} → pos ${i} (${downsFromHeader} DOWNs) → "${name}"`);
+    outputChannel.appendLine('─── Hotkey → Slot → Picker Position → Model ───');
+    for (let i = 0; i < Math.min(8, slots.length); i++) {
+        const name = slots[i];
+        const pickerPos = pickerOrder.indexOf(name);
+        const downsFromHeader = pickerPos + 1;
+        if (pickerPos >= 0) {
+            outputChannel.appendLine(`  Ctrl+Shift+${i + 1} → "${name}" → picker pos ${pickerPos} (${downsFromHeader} DOWNs) ✅`);
+        } else {
+            outputChannel.appendLine(`  Ctrl+Shift+${i + 1} → "${name}" → ❌ NOT FOUND in picker order!`);
+        }
+    }
+    if (slots.length < 8) {
+        for (let i = slots.length; i < 8; i++) {
+            outputChannel.appendLine(`  Ctrl+Shift+${i + 1} → (empty slot)`);
+        }
     }
     outputChannel.appendLine('');
 
@@ -359,10 +431,10 @@ async function cmdDiagnose() {
     outputChannel.appendLine('─── Navigation Method ───');
     outputChannel.appendLine('  1. Open picker (toggleModelSelector)');
     outputChannel.appendLine('  2. UP x20 → overshoot to header "Model"');
-    outputChannel.appendLine('  3. DOWN x(pos+1) → navigate to target item');
+    outputChannel.appendLine('  3. DOWN x(pickerPosition+1) → navigate to target item');
     outputChannel.appendLine('  4. ENTER → select');
     outputChannel.appendLine('');
-    outputChannel.appendLine('  Note: +1 because first DOWN goes from header → item 0');
+    outputChannel.appendLine('  Note: slots[] maps favorite names → pickerOrder[] finds position');
     outputChannel.appendLine('');
 
     // AppleScript test
@@ -394,6 +466,8 @@ function getConfig() {
     return vscode.workspace.getConfiguration('agModelSwitcher');
 }
 
+// Returns the PICKER ORDER — the full list of models in the
+// order they appear in the native Antigravity IDE model picker.
 function getModelOrder() {
     const cfg = getConfig();
     const fromConfig = cfg.get('modelOrder', []);
@@ -401,6 +475,18 @@ function getModelOrder() {
         return fromConfig;
     }
     return DEFAULT_MODEL_ORDER;
+}
+
+// Returns the SLOT LIST — the user's favorite models assigned
+// to Ctrl+Shift+1~8. Falls back to modelOrder if not configured.
+function getSlots() {
+    const cfg = getConfig();
+    const fromConfig = cfg.get('slots', []);
+    if (fromConfig && fromConfig.length > 0) {
+        return fromConfig;
+    }
+    // Fallback: use modelOrder directly (backward compatible)
+    return getModelOrder();
 }
 
 function reg(ctx, id, handler) {

@@ -1,8 +1,8 @@
 {
   "name": "ag-model-switcher",
   "displayName": "AG Model Switcher",
-  "description": "Auto-select AI model trong Antigravity IDE bằng phím tắt (position-based, AppleScript)",
-  "version": "4.2.0",
+  "description": "Auto-select AI model trong Antigravity IDE bằng phím tắt — hỗ trợ slot favorites (AppleScript, macOS)",
+  "version": "4.3.0",
   "publisher": "pipyl",
   "license": "MIT",
   "repository": {
@@ -150,16 +150,22 @@
           "type": "array",
           "items": { "type": "string" },
           "default": [
+            "Claude Sonnet 4.6 (Thinking)",
+            "Claude Opus 4.6 (Thinking)",
+            "GPT-OSS 120B (Medium)",
             "Gemini 3.5 Flash (Medium)",
             "Gemini 3.5 Flash (High)",
             "Gemini 3.5 Flash (Low)",
             "Gemini 3.1 Pro (Low)",
-            "Gemini 3.1 Pro (High)",
-            "Claude Sonnet 4.6 (Thinking)",
-            "Claude Opus 4.6 (Thinking)",
-            "GPT-OSS 120B (Medium)"
+            "Gemini 3.1 Pro (High)"
           ],
-          "description": "Thứ tự model trong native picker. Ctrl+Shift+1 = model đầu tiên, Ctrl+Shift+2 = thứ 2, ... PHẢI khớp chính xác với UI."
+          "markdownDescription": "Thứ tự model trong **native picker** (UI gốc). **PHẢI khớp chính xác** thứ tự hiển thị từ trên xuống. Extension dùng vị trí này để điều hướng bàn phím."
+        },
+        "agModelSwitcher.slots": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "Danh sách model yêu thích gán cho `Ctrl+Shift+1~8`. Tên model phải có trong `modelOrder`. Nếu để trống → dùng `modelOrder` trực tiếp.\n\nVí dụ: chỉ giữ 3 model hay dùng:\n```json\n[\"Gemini 3.5 Flash (High)\", \"Claude Sonnet 4.6 (Thinking)\", \"Gemini 3.1 Pro (High)\"]\n```"
         },
         "agModelSwitcher.autoSelect": {
           "type": "boolean",
