@@ -1,8 +1,8 @@
 {
   "name": "ag-model-switcher",
   "displayName": "AG Model Switcher",
-  "description": "Auto-select AI model in Antigravity IDE via shortcuts — supports favorite slots (AppleScript, macOS)",
-  "version": "6.0.0",
+  "description": "Auto-select AI model in Antigravity IDE via shortcuts — supports favorite slots (macOS, Windows, Linux)",
+  "version": "7.0.0",
   "publisher": "pipyl",
   "license": "MIT",
   "repository": {
@@ -181,7 +181,13 @@
         "agModelSwitcher.autoSelect": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically select model using keyboard simulation (macOS, requires Accessibility permissions)"
+          "description": "Automatically select model using keyboard simulation (macOS: AppleScript, Windows: PowerShell, Linux: xdotool/ydotool)"
+        },
+        "agModelSwitcher.linuxTool": {
+          "type": "string",
+          "enum": ["xdotool", "ydotool", "xte"],
+          "default": "xdotool",
+          "markdownDescription": "Linux keyboard simulation tool.\n- **xdotool**: X11 (most common, `sudo apt install xdotool`)\n- **ydotool**: Wayland (`sudo apt install ydotool`, requires uinput)\n- **xte**: xautomation (`sudo apt install xautomation`)"
         },
         "agModelSwitcher.showStatusBar": {
           "type": "boolean",

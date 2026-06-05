@@ -4,6 +4,24 @@ All notable changes to **AG Model Switcher** are documented here.
 
 ---
 
+## [7.0.0] - 2026-06-05
+
+### Added
+- **🌐 Windows support** — auto-select via PowerShell `[System.Windows.Forms.SendKeys]`. No extra installation required.
+- **🐧 Linux support** — auto-select via `xdotool` (X11), `ydotool` (Wayland), or `xte` (xautomation).
+- **`linuxTool` setting** — choose between `xdotool`, `ydotool`, or `xte` for Linux keyboard simulation.
+- **Platform Abstraction Layer** — unified keyboard driver architecture supporting macOS, Windows, and Linux.
+- **Enhanced diagnostics** — platform detection, tool availability checks, Linux display server detection (X11 vs Wayland), and platform-specific live tests.
+- **Platform-specific error messages** — actionable guidance for each OS (Accessibility on macOS, tool installation on Linux).
+
+### Changed
+- Refactored `autoSelectByPosition()` to use platform-agnostic keyboard driver dispatch.
+- Updated status bar tooltip to show platform info and driver status.
+- `execAppleScript()` replaced by generic `execShellCommand()` supporting all platforms.
+- Updated README with cross-platform documentation and troubleshooting.
+
+---
+
 ## [6.0.0] - 2026-06-05
 
 ### Added
