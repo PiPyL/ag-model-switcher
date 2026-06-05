@@ -2,7 +2,7 @@
 
 > ⚡ Instantly switch AI models in **Antigravity IDE** using keyboard shortcuts — no mouse required.
 
-![Version](https://img.shields.io/badge/version-4.3.0-blue)
+![Version](https://img.shields.io/badge/version-6.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 

@@ -4,6 +4,18 @@ All notable changes to **AG Model Switcher** are documented here.
 
 ---
 
+## [6.0.0] - 2026-06-05
+
+### Added
+- **`cyclePrev` command (`Ctrl+Shift+,`)** — instantly cycle to the previous model in slots without opening popups.
+
+### Changed
+- **Performance optimizations** — optimized AppleScript delay parameters, reducing transition times significantly (wait delay reduced from 500ms to 200ms, overshoot UP key presses reduced from 20 to 12).
+- Status bar display optimized to show current active model.
+- Diagnostical logging now lists cycling info and current active model tracking.
+
+---
+
 ## [4.3.0] - 2026-06-05
 
 ### Added

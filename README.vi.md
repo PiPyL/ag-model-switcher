@@ -2,7 +2,7 @@
 
 > ⚡ Chuyển đổi AI model trong **Antigravity IDE** tức thì bằng phím tắt — không cần chuột.
 
-![Phiên bản](https://img.shields.io/badge/version-4.3.0-blue)
+![Phiên bản](https://img.shields.io/badge/version-6.0.0-blue)
 ![Nền tảng](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Giấy phép](https://img.shields.io/badge/license-MIT-green)
 
