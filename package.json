@@ -1,0 +1,162 @@
+{
+  "name": "ag-model-switcher",
+  "displayName": "AG Model Switcher",
+  "description": "Auto-select AI model trong Antigravity IDE bằng phím tắt (position-based, AppleScript)",
+  "version": "4.2.0",
+  "publisher": "pipyl",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agModelSwitcher.openPicker",
+        "title": "Open Model Picker",
+        "category": "AG Model Switcher",
+        "icon": "$(hubot)"
+      },
+      {
+        "command": "agModelSwitcher.cycleNext",
+        "title": "Pick Model and Auto-Select",
+        "category": "AG Model Switcher",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "agModelSwitcher.slot1",
+        "title": "Select Model #1",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot2",
+        "title": "Select Model #2",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot3",
+        "title": "Select Model #3",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot4",
+        "title": "Select Model #4",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot5",
+        "title": "Select Model #5",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot6",
+        "title": "Select Model #6",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot7",
+        "title": "Select Model #7",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.slot8",
+        "title": "Select Model #8",
+        "category": "AG Model Switcher"
+      },
+      {
+        "command": "agModelSwitcher.diagnose",
+        "title": "Diagnose - Test Auto-Select",
+        "category": "AG Model Switcher",
+        "icon": "$(search)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "agModelSwitcher.openPicker",
+        "key": "ctrl+shift+m",
+        "mac": "ctrl+shift+m"
+      },
+      {
+        "command": "agModelSwitcher.cycleNext",
+        "key": "ctrl+shift+.",
+        "mac": "ctrl+shift+."
+      },
+      {
+        "command": "agModelSwitcher.slot1",
+        "key": "ctrl+shift+1",
+        "mac": "ctrl+shift+1"
+      },
+      {
+        "command": "agModelSwitcher.slot2",
+        "key": "ctrl+shift+2",
+        "mac": "ctrl+shift+2"
+      },
+      {
+        "command": "agModelSwitcher.slot3",
+        "key": "ctrl+shift+3",
+        "mac": "ctrl+shift+3"
+      },
+      {
+        "command": "agModelSwitcher.slot4",
+        "key": "ctrl+shift+4",
+        "mac": "ctrl+shift+4"
+      },
+      {
+        "command": "agModelSwitcher.slot5",
+        "key": "ctrl+shift+5",
+        "mac": "ctrl+shift+5"
+      },
+      {
+        "command": "agModelSwitcher.slot6",
+        "key": "ctrl+shift+6",
+        "mac": "ctrl+shift+6"
+      },
+      {
+        "command": "agModelSwitcher.slot7",
+        "key": "ctrl+shift+7",
+        "mac": "ctrl+shift+7"
+      },
+      {
+        "command": "agModelSwitcher.slot8",
+        "key": "ctrl+shift+8",
+        "mac": "ctrl+shift+8"
+      },
+      {
+        "command": "agModelSwitcher.diagnose",
+        "key": "ctrl+shift+d ctrl+shift+m",
+        "mac": "ctrl+shift+d ctrl+shift+m"
+      }
+    ],
+    "configuration": {
+      "title": "AG Model Switcher",
+      "properties": {
+        "agModelSwitcher.modelOrder": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "Gemini 3.5 Flash (Medium)",
+            "Gemini 3.5 Flash (High)",
+            "Gemini 3.5 Flash (Low)",
+            "Gemini 3.1 Pro (Low)",
+            "Gemini 3.1 Pro (High)",
+            "Claude Sonnet 4.6 (Thinking)",
+            "Claude Opus 4.6 (Thinking)",
+            "GPT-OSS 120B (Medium)"
+          ],
+          "description": "Thứ tự model trong native picker. Ctrl+Shift+1 = model đầu tiên, Ctrl+Shift+2 = thứ 2, ... PHẢI khớp chính xác với UI."
+        },
+        "agModelSwitcher.autoSelect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Tự động chọn model bằng keyboard simulation (macOS, cần Accessibility permissions)"
+        },
+        "agModelSwitcher.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Hiển thị nút Model Switcher trên status bar"
+        }
+      }
+    }
+  }
+}
